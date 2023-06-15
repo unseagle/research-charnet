@@ -98,11 +98,11 @@ if __name__ == '__main__':
         im, scale_w, scale_h, original_w, original_h = resize(im_original, size=cfg.INPUT_SIZE)
         with torch.no_grad():
             char_bboxes, char_scores, word_instances = charnet(im, scale_w, scale_h, original_w, original_h)
-            #save_word_recognition(
-            #    word_instances, os.path.splitext(im_name)[0],
-            #    args.results_dir, cfg.RESULTS_SEPARATOR
-            #)
-            #save_img(char_bboxes, im_original, im_name)
+            save_word_recognition(
+                word_instances, os.path.splitext(im_name)[0],
+                args.results_dir, cfg.RESULTS_SEPARATOR
+            )
+            save_img(char_bboxes, im_original, im_name)
             save_char_recognition(
                 char_bboxes, os.path.splitext(im_name)[0],
                 args.results_dir, cfg.RESULTS_SEPARATOR
