@@ -16,6 +16,7 @@ from charnet.modeling.layers import Scale
 import torchvision.transforms as T
 from .postprocessing import OrientedTextPostProcessing
 from charnet.config import cfg
+from ..loss import CombinedLoss
 
 
 def _conv3x3_bn_relu(in_channels, out_channels, dilation=1):
@@ -144,38 +145,23 @@ class CharNet(nn.Module):
 
         self.transform = self.build_transform()
 
-    def forward(self, im, im_scale_w, im_scale_h, original_im_w, original_im_h):
-        im = self.transform(im).cuda()
-        im = im.unsqueeze(0)
+        self.loss = CombinedLoss()
+
+    # def forward(self, im, im_scale_w, im_scale_h, original_im_w, original_im_h):
+    def forward(self, im):
+        # im = self.transform(im).cuda()
+        # im = im.unsqueeze(0)
         features = self.backbone(im)
 
-        pred_word_fg, pred_word_tblr, pred_word_orient = self.word_detector(features)
+        # pred_word_fg, pred_word_tblr, pred_word_orient = self.word_detector(features)
         pred_char_fg, pred_char_tblr, pred_char_orient = self.char_detector(features)
         recognition_results = self.char_recognizer(features)
 
-        pred_word_fg = F.softmax(pred_word_fg, dim=1)
+        # pred_word_fg = F.softmax(pred_word_fg, dim=1)
         pred_char_fg = F.softmax(pred_char_fg, dim=1)
         pred_char_cls = F.softmax(recognition_results, dim=1)
 
-        pred_word_fg, pred_word_tblr, \
-        pred_word_orient, pred_char_fg, \
-        pred_char_tblr, pred_char_cls, \
-        pred_char_orient = to_numpy_or_none(
-            pred_word_fg, pred_word_tblr,
-            pred_word_orient, pred_char_fg,
-            pred_char_tblr, pred_char_cls,
-            pred_char_orient
-        )
-
-        char_bboxes, char_scores, word_instances = self.post_processing(
-            pred_word_fg[0, 1], pred_word_tblr[0],
-            pred_word_orient[0, 0], pred_char_fg[0, 1],
-            pred_char_tblr[0], pred_char_cls[0],
-            im_scale_w, im_scale_h,
-            original_im_w, original_im_h
-        )
-
-        return char_bboxes, char_scores, word_instances
+        return pred_char_fg, pred_char_tblr, pred_char_cls
 
     def build_transform(self):
         to_rgb_transform = T.Lambda(lambda x: x[[2, 1, 0]])
