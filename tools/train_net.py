@@ -22,7 +22,7 @@ print(cfg)
 
 model = CharNet()
 # this is how I can load the default weights to train from
-model.load_state_dict(torch.load(cfg.WEIGHT))
+model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
 
 model.to(device)
 

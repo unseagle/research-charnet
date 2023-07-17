@@ -124,10 +124,6 @@ class CharNet(nn.Module):
             decoder_channels,
             bottleneck_channels
         )
-        self.char_recognizer = CharRecognizer(
-            decoder_channels, bottleneck_channels,
-            num_classes=cfg.NUM_CHAR_CLASSES
-        )
 
         args = {
             "word_min_score": cfg.WORD_MIN_SCORE,
@@ -153,15 +149,12 @@ class CharNet(nn.Module):
         # im = im.unsqueeze(0)
         features = self.backbone(im)
 
-        # pred_word_fg, pred_word_tblr, pred_word_orient = self.word_detector(features)
         pred_char_fg, pred_char_tblr, pred_char_orient = self.char_detector(features)
-        recognition_results = self.char_recognizer(features)
 
         # pred_word_fg = F.softmax(pred_word_fg, dim=1)
         pred_char_fg = F.softmax(pred_char_fg, dim=1)
-        pred_char_cls = F.softmax(recognition_results, dim=1)
 
-        return pred_char_fg, pred_char_tblr, pred_char_cls
+        return pred_char_fg, pred_char_tblr
 
     def build_transform(self):
         to_rgb_transform = T.Lambda(lambda x: x[[2, 1, 0]])

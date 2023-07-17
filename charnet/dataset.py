@@ -422,4 +422,4 @@ class CustomDataset(data.Dataset):
         img = img.astype(np.float32)
         img = torch.from_numpy(img)
 
-        return transform(img), (true_char_fg, true_char_tblro, true_char_cls)
+        return transform(img), (true_char_fg, true_char_tblro)

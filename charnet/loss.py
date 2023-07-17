@@ -7,8 +7,7 @@ class CombinedLoss(nn.Module):
     def __init__(self):
         super(CombinedLoss, self).__init__()
 
-    def forward(self, pred_char_fg, pred_char_tblro, pred_char_cls,
-                true_char_fg, true_char_tblro, true_char_cls):
+    def forward(self, pred_char_fg, pred_char_tblro, true_char_fg, true_char_tblro):
         # FG LOSS: DICE + BCE
         smooth = 1
         pred_char_fg = torch.reshape(pred_char_fg[:, 1], (-1,))
@@ -33,7 +32,4 @@ class CombinedLoss(nn.Module):
         # tblro_loss = aabb_loss + 10 * theta_loss
         tblro_loss = aabb_loss
 
-        # CHAR CLASSIFICATION LOSS: BCE
-        cls_loss = F.binary_cross_entropy(pred_char_cls.view(-1), true_char_cls.view(-1), reduction='mean')
-
-        return fg_loss + torch.mean(tblro_loss) + cls_loss
+        return fg_loss + torch.mean(tblro_loss)
