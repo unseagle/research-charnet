@@ -149,12 +149,13 @@ class CharNet(nn.Module):
         # im = im.unsqueeze(0)
         features = self.backbone(im)
 
+        pred_word_fg, pred_word_tblr, pred_word_orient = self.word_detector(features)
         pred_char_fg, pred_char_tblr, pred_char_orient = self.char_detector(features)
 
-        # pred_word_fg = F.softmax(pred_word_fg, dim=1)
+        pred_word_fg = F.softmax(pred_word_fg, dim=1)
         pred_char_fg = F.softmax(pred_char_fg, dim=1)
 
-        return pred_char_fg, pred_char_tblr
+        return pred_word_fg, pred_word_tblr, pred_char_fg, pred_char_tblr
 
     def build_transform(self):
         to_rgb_transform = T.Lambda(lambda x: x[[2, 1, 0]])
