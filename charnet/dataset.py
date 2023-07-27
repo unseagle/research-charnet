@@ -161,73 +161,73 @@ def find_min_rect_angle(vertices):
     return angle_list[best_index] / 180 * math.pi
 
 
-def is_cross_text(start_loc, length, vertices):
-    '''check if the crop image crosses text regions
-    Input:
-        start_loc: left-top position
-        length   : length of crop image
-        vertices : vertices of text regions <numpy.ndarray, (n,8)>
-    Output:
-        True if crop image crosses text region
-    '''
-    if vertices.size == 0:
-        return False
-    start_w, start_h = start_loc
-    a = np.array([start_w, start_h, start_w + length, start_h,
-                  start_w + length, start_h + length, start_w, start_h + length]).reshape((4, 2))
-    p1 = Polygon(a).convex_hull
-    for vertice in vertices:
-        p2 = Polygon(vertice.reshape((4, 2))).convex_hull
-        inter = p1.intersection(p2).area
-        if 0.01 <= inter / p2.area <= 0.99:
-            return True
-    return False
+# def is_cross_text(start_loc, length, vertices):
+#     '''check if the crop image crosses text regions
+#     Input:
+#         start_loc: left-top position
+#         length   : length of crop image
+#         vertices : vertices of text regions <numpy.ndarray, (n,8)>
+#     Output:
+#         True if crop image crosses text region
+#     '''
+#     if vertices.size == 0:
+#         return False
+#     start_w, start_h = start_loc
+#     a = np.array([start_w, start_h, start_w + length, start_h,
+#                   start_w + length, start_h + length, start_w, start_h + length]).reshape((4, 2))
+#     p1 = Polygon(a).convex_hull
+#     for vertice in vertices:
+#         p2 = Polygon(vertice.reshape((4, 2))).convex_hull
+#         inter = p1.intersection(p2).area
+#         if 0.01 <= inter / p2.area <= 0.99:
+#             return True
+#     return False
 
 
-def crop_img(img, vertices, labels, length):
-    '''crop img patches to obtain batch and augment
-    Input:
-        img         : PIL Image
-        vertices    : vertices of text regions <numpy.ndarray, (n,8)>
-        labels      : 1->valid, 0->ignore, <numpy.ndarray, (n,)>
-        length      : length of cropped image region
-    Output:
-        region      : cropped image region
-        new_vertices: new vertices in cropped region
-    '''
-    h, w = img.height, img.width
-    # confirm the shortest side of image >= length
-    if h >= w and w < length:
-        img = img.resize((length, int(h * length / w)), Image.BILINEAR)
-    elif h < w and h < length:
-        img = img.resize((int(w * length / h), length), Image.BILINEAR)
-    ratio_w = img.width / w
-    ratio_h = img.height / h
-    assert (ratio_w >= 1 and ratio_h >= 1)
-
-    new_vertices = np.zeros(vertices.shape)
-    if vertices.size > 0:
-        new_vertices[:, [0, 2, 4, 6]] = vertices[:, [0, 2, 4, 6]] * ratio_w
-        new_vertices[:, [1, 3, 5, 7]] = vertices[:, [1, 3, 5, 7]] * ratio_h
-
-    # find random position
-    remain_h = img.height - length
-    remain_w = img.width - length
-    flag = True
-    cnt = 0
-    while flag and cnt < 1000:
-        cnt += 1
-        start_w = int(np.random.rand() * remain_w)
-        start_h = int(np.random.rand() * remain_h)
-        flag = is_cross_text([start_w, start_h], length, new_vertices[labels == 1, :])
-    box = (start_w, start_h, start_w + length, start_h + length)
-    region = img.crop(box)
-    if new_vertices.size == 0:
-        return region, new_vertices
-
-    new_vertices[:, [0, 2, 4, 6]] -= start_w
-    new_vertices[:, [1, 3, 5, 7]] -= start_h
-    return region, new_vertices
+# def crop_img(img, vertices, labels, length):
+#     '''crop img patches to obtain batch and augment
+#     Input:
+#         img         : PIL Image
+#         vertices    : vertices of text regions <numpy.ndarray, (n,8)>
+#         labels      : 1->valid, 0->ignore, <numpy.ndarray, (n,)>
+#         length      : length of cropped image region
+#     Output:
+#         region      : cropped image region
+#         new_vertices: new vertices in cropped region
+#     '''
+#     h, w = img.height, img.width
+#     # confirm the shortest side of image >= length
+#     if h >= w and w < length:
+#         img = img.resize((length, int(h * length / w)), Image.BILINEAR)
+#     elif h < w and h < length:
+#         img = img.resize((int(w * length / h), length), Image.BILINEAR)
+#     ratio_w = img.width / w
+#     ratio_h = img.height / h
+#     assert (ratio_w >= 1 and ratio_h >= 1)
+#
+#     new_vertices = np.zeros(vertices.shape)
+#     if vertices.size > 0:
+#         new_vertices[:, [0, 2, 4, 6]] = vertices[:, [0, 2, 4, 6]] * ratio_w
+#         new_vertices[:, [1, 3, 5, 7]] = vertices[:, [1, 3, 5, 7]] * ratio_h
+#
+#     # find random position
+#     remain_h = img.height - length
+#     remain_w = img.width - length
+#     flag = True
+#     cnt = 0
+#     while flag and cnt < 1000:
+#         cnt += 1
+#         start_w = int(np.random.rand() * remain_w)
+#         start_h = int(np.random.rand() * remain_h)
+#         flag = is_cross_text([start_w, start_h], length, new_vertices[labels == 1, :])
+#     box = (start_w, start_h, start_w + length, start_h + length)
+#     region = img.crop(box)
+#     if new_vertices.size == 0:
+#         return region, new_vertices
+#
+#     new_vertices[:, [0, 2, 4, 6]] -= start_w
+#     new_vertices[:, [1, 3, 5, 7]] -= start_h
+#     return region, new_vertices
 
 
 def rotate_all_pixels(rotate_mat, anchor_x, anchor_y, length):
@@ -254,48 +254,48 @@ def rotate_all_pixels(rotate_mat, anchor_x, anchor_y, length):
     return rotated_x, rotated_y
 
 
-def adjust_height(img, vertices, ratio=0.2):
-    '''adjust height of image to aug data
-    Input:
-        img         : PIL Image
-        vertices    : vertices of text regions <numpy.ndarray, (n,8)>
-        ratio       : height changes in [0.8, 1.2]
-    Output:
-        img         : adjusted PIL Image
-        new_vertices: adjusted vertices
-    '''
-    ratio_h = 1 + ratio * (np.random.rand() * 2 - 1)
-    old_h = img.height
-    new_h = int(np.around(old_h * ratio_h))
-    img = img.resize((img.width, new_h), Image.BILINEAR)
-
-    new_vertices = vertices.copy()
-    if vertices.size > 0:
-        new_vertices[:, [1, 3, 5, 7]] = vertices[:, [1, 3, 5, 7]] * (new_h / old_h)
-    return img, new_vertices
-
-
-def rotate_img(img, vertices, angle_range=10):
-    '''rotate image [-10, 10] degree to aug data
-    Input:
-        img         : PIL Image
-        vertices    : vertices of text regions <numpy.ndarray, (n,8)>
-        angle_range : rotate range
-    Output:
-        img         : rotated PIL Image
-        new_vertices: rotated vertices
-    '''
-    center_x = (img.width - 1) / 2
-    center_y = (img.height - 1) / 2
-    angle = angle_range * (np.random.rand() * 2 - 1)
-    img = img.rotate(angle, Image.BILINEAR)
-    new_vertices = np.zeros(vertices.shape)
-    for i, vertice in enumerate(vertices):
-        new_vertices[i, :] = rotate_vertices(vertice, -angle / 180 * math.pi, np.array([[center_x], [center_y]]))
-    return img, new_vertices
+# def adjust_height(img, vertices, ratio=0.2):
+#     '''adjust height of image to aug data
+#     Input:
+#         img         : PIL Image
+#         vertices    : vertices of text regions <numpy.ndarray, (n,8)>
+#         ratio       : height changes in [0.8, 1.2]
+#     Output:
+#         img         : adjusted PIL Image
+#         new_vertices: adjusted vertices
+#     '''
+#     ratio_h = 1 + ratio * (np.random.rand() * 2 - 1)
+#     old_h = img.height
+#     new_h = int(np.around(old_h * ratio_h))
+#     img = img.resize((img.width, new_h), Image.BILINEAR)
+#
+#     new_vertices = vertices.copy()
+#     if vertices.size > 0:
+#         new_vertices[:, [1, 3, 5, 7]] = vertices[:, [1, 3, 5, 7]] * (new_h / old_h)
+#     return img, new_vertices
 
 
-def get_score_geo(img, vertices, labels, scale, length):
+# def rotate_img(img, vertices, angle_range=10):
+#     '''rotate image [-10, 10] degree to aug data
+#     Input:
+#         img         : PIL Image
+#         vertices    : vertices of text regions <numpy.ndarray, (n,8)>
+#         angle_range : rotate range
+#     Output:
+#         img         : rotated PIL Image
+#         new_vertices: rotated vertices
+#     '''
+#     center_x = (img.width - 1) / 2
+#     center_y = (img.height - 1) / 2
+#     angle = angle_range * (np.random.rand() * 2 - 1)
+#     img = img.rotate(angle, Image.BILINEAR)
+#     new_vertices = np.zeros(vertices.shape)
+#     for i, vertice in enumerate(vertices):
+#         new_vertices[i, :] = rotate_vertices(vertice, -angle / 180 * math.pi, np.array([[center_x], [center_y]]))
+#     return img, new_vertices
+
+
+def get_score_geo(img, vertices, labels, word_vertices, scale, length):
     '''generate score gt and geometry gt
     Input:
         img     : PIL Image
@@ -309,6 +309,9 @@ def get_score_geo(img, vertices, labels, scale, length):
     score_map = np.zeros((int(img.height * scale), int(img.width * scale), 1), np.float32)
     geo_map = np.zeros((int(img.height * scale), int(img.width * scale), 5), np.float32)
     cls_map = np.zeros((int(img.height * scale), int(img.width * scale), charnet.config.cfg.NUM_CHAR_CLASSES), np.float32)
+
+    score_map_word = np.zeros((int(img.height * scale), int(img.width * scale), 1), np.float32)
+    geo_map_word = np.zeros((int(img.height * scale), int(img.width * scale), 5), np.float32)
 
     index = np.arange(0, length, int(1 / scale))
     index_x, index_y = np.meshgrid(index, index)
@@ -342,10 +345,43 @@ def get_score_geo(img, vertices, labels, scale, length):
         geo_map[:, :, 4] += theta * temp_mask
 
         cv.fillPoly(np.int32(cls_map[:, :, labels[i]]), [poly], 1)
-
     cv.fillPoly(score_map, polys, 1)
-    return torch.Tensor(score_map).permute(2, 0, 1), torch.Tensor(geo_map).permute(2, 0, 1), torch.Tensor(
-        cls_map).permute(2, 0, 1)
+
+    index = np.arange(0, length, int(1 / scale))
+    index_x, index_y = np.meshgrid(index, index)
+    polys = []
+
+    for i, vertex in enumerate(word_vertices):
+        poly = np.around(scale * shrink_poly(vertex).reshape((4, 2))).astype(np.int32)  # scaled & shrunk
+        polys.append(poly)
+        temp_mask = np.zeros(score_map.shape[:-1], np.float32)
+        cv.fillPoly(temp_mask, [poly], 1)
+
+        theta = find_min_rect_angle(vertex)
+        rotate_mat = get_rotate_mat(theta)
+
+        rotated_vertices = rotate_vertices(vertex, theta)
+        x_min, x_max, y_min, y_max = get_boundary(rotated_vertices)
+        rotated_x, rotated_y = rotate_all_pixels(rotate_mat, vertex[0], vertex[1], length)
+
+        d1 = rotated_y - y_min
+        d1[d1 < 0] = 0
+        d2 = y_max - rotated_y
+        d2[d2 < 0] = 0
+        d3 = rotated_x - x_min
+        d3[d3 < 0] = 0
+        d4 = x_max - rotated_x
+        d4[d4 < 0] = 0
+        geo_map_word[:, :, 0] += d1[index_y, index_x] * temp_mask
+        geo_map_word[:, :, 1] += d2[index_y, index_x] * temp_mask
+        geo_map_word[:, :, 2] += d3[index_y, index_x] * temp_mask
+        geo_map_word[:, :, 3] += d4[index_y, index_x] * temp_mask
+        geo_map_word[:, :, 4] += theta * temp_mask
+
+    cv.fillPoly(score_map_word, polys, 1)
+    return (torch.Tensor(score_map_word).permute(2, 0, 1), torch.Tensor(geo_map_word).permute(2, 0, 1),
+            torch.Tensor(score_map).permute(2, 0, 1), torch.Tensor(geo_map).permute(2, 0, 1),
+            torch.Tensor(cls_map).permute(2, 0, 1))
 
 
 def extract_vertices(lines, dictionary):
@@ -359,20 +395,38 @@ def extract_vertices(lines, dictionary):
     '''
     labels = []
     vertices = []
+    word_vertices = []
+    first = True
+    actual_word = ""
+    build_word = ""
     for line in lines:
-        orig_line = line.rstrip('\n')
-        line = line.rstrip('\n').lstrip('\ufeff').split(',')
-        vertices.append(list(map(int, line[:8])))
-        character = line[8].upper()
-        if character not in dictionary:
-            if ",," == orig_line[-2:]:
-                labels.append(dictionary[','])
-            else:
-                print(character, 'not in dictionary.')
-                labels.append(0)
+        # first line in block is word line
+        if line == "\n":
+            assert actual_word == build_word
+            first = True
+            continue
+        elif first:
+            first_line = line.rstrip('\n').lstrip('\ufeff').split(',')
+            word_vertices.append(list(map(int, first_line[:8])))
+            actual_word = first_line[8]
+            build_word = ""
+            first = False
         else:
-            labels.append(dictionary[character])
-    return np.array(vertices), np.array(labels)
+            orig_line = line.rstrip('\n')
+            line = line.rstrip('\n').lstrip('\ufeff').split(',')
+            vertices.append(list(map(int, line[:8])))
+            character = line[8].upper()
+            build_word += line[8]
+            if character not in dictionary:
+                if ",," == orig_line[-2:]:
+                    labels.append(dictionary[','])
+                else:
+                    print(character, 'not in dictionary.')
+                    labels.append(0)
+            else:
+                labels.append(dictionary[character])
+            # sanity check, is the word correct
+    return np.array(word_vertices), np.array(vertices), np.array(labels)
 
 
 def load_char_dict(path, separator=chr(31)):
@@ -405,7 +459,7 @@ class CustomDataset(data.Dataset):
         with open(mask_path, 'r') as f:
             lines = f.readlines()
 
-        vertices, labels = extract_vertices(lines, self.dictionary)
+        word_vertices, vertices, labels = extract_vertices(lines, self.dictionary)
 
         img = Image.open(img_path)
         # img, vertices = adjust_height(img, vertices)
@@ -414,7 +468,7 @@ class CustomDataset(data.Dataset):
         transform = transforms.Compose([  # transforms.ColorJitter(0.5, 0.5, 0.5, 0.25),
             transforms.Normalize(mean=0.5, std=0.5)])
 
-        true_char_fg, true_char_tblro, true_char_cls = get_score_geo(img, vertices, labels, self.scale, self.length)
+        true_word_fg, true_word_tblro, true_char_fg, true_char_tblro, true_char_cls = get_score_geo(img, vertices, labels, word_vertices, self.scale, self.length)
         img = np.array(img)
         img = np.stack((img,) * 3, axis=2)  # RGB
         img = img / 255.0  # (512, 512)
@@ -422,4 +476,4 @@ class CustomDataset(data.Dataset):
         img = img.astype(np.float32)
         img = torch.from_numpy(img)
 
-        return transform(img), (true_char_fg, true_char_tblro)
+        return transform(img), (true_word_fg, true_word_tblro, true_char_fg, true_char_tblro)

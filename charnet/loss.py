@@ -7,7 +7,7 @@ class CombinedLoss(nn.Module):
     def __init__(self):
         super(CombinedLoss, self).__init__()
 
-    def forward(self, pred_char_fg, pred_char_tblro, true_char_fg, true_char_tblro):
+    def forward(self, pred_char_fg, pred_char_tblro, true_word_fg, true_word_tblro, true_char_fg, true_char_tblro):
         # FG LOSS: DICE + BCE
         smooth = 1
         pred_char_fg = torch.reshape(pred_char_fg[:, 1], (-1,))
