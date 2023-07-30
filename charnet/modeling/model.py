@@ -145,8 +145,8 @@ class CharNet(nn.Module):
         self.loss = CombinedLoss()
 
     # def forward(self, im, im_scale_w, im_scale_h, original_im_w, original_im_h):
-    def forward(self, im):
-        # im = self.transform(im).cuda()
+    def forward(self, im: torch.Tensor):
+        im = torch.stack([self.transform(oneimg).cuda() for oneimg in im])
         # im = im.unsqueeze(0)
         features = self.backbone(im)
 
