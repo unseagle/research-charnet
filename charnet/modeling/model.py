@@ -82,6 +82,7 @@ class CharDetector(nn.Module):
         )
         self.char_fg_pred = nn.Conv2d(bottleneck_channels, 2, kernel_size=1)
         self.char_tblr_pred = nn.Conv2d(bottleneck_channels, 4, kernel_size=1)
+        self.orient_pred = nn.Conv2d(bottleneck_channels, 1, kernel_size=1)
 
     def forward(self, x):
         feat = self.character_det_conv_final(x)
@@ -89,7 +90,7 @@ class CharDetector(nn.Module):
         pred_char_fg = self.char_fg_pred(self.char_fg_feat(feat))
         char_regression_feat = self.char_regression_feat(feat)
         pred_char_tblr = F.relu(self.char_tblr_pred(char_regression_feat)) * 10.
-        pred_char_orient = None
+        pred_char_orient = self.orient_pred(char_regression_feat)
 
         return pred_char_fg, pred_char_tblr, pred_char_orient
 
@@ -155,7 +156,10 @@ class CharNet(nn.Module):
         pred_word_fg = F.softmax(pred_word_fg, dim=1)
         pred_char_fg = F.softmax(pred_char_fg, dim=1)
 
-        return pred_word_fg, pred_word_tblr, pred_char_fg, pred_char_tblr
+        pred_word_tblro = torch.cat((pred_word_tblr, pred_word_orient), 1)
+        pred_char_tblro = torch.cat((pred_char_tblr, pred_char_orient), 1)
+
+        return pred_word_fg, pred_word_tblro, pred_char_fg, pred_char_tblro
 
     def build_transform(self):
         to_rgb_transform = T.Lambda(lambda x: x[[2, 1, 0]])
