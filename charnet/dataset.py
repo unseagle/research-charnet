@@ -354,7 +354,7 @@ def get_score_geo(img, vertices, labels, word_vertices, scale, length):
     for i, vertex in enumerate(word_vertices):
         poly = np.around(scale * shrink_poly(vertex).reshape((4, 2))).astype(np.int32)  # scaled & shrunk
         polys.append(poly)
-        temp_mask = np.zeros(score_map.shape[:-1], np.float32)
+        temp_mask = np.zeros(score_map_word.shape[:-1], np.float32)
         cv.fillPoly(temp_mask, [poly], 1)
 
         theta = find_min_rect_angle(vertex)
@@ -468,6 +468,9 @@ class CustomDataset(data.Dataset):
         transform = transforms.Compose([  # transforms.ColorJitter(0.5, 0.5, 0.5, 0.25),
             transforms.Normalize(mean=0.5, std=0.5)])
 
+        if img.height != 512:
+            print(f"Wrong dimensions, img.height={img.height}, img.width={img.width}")
+            print(img_path)
         true_word_fg, true_word_tblro, true_char_fg, true_char_tblro, true_char_cls = get_score_geo(img, vertices, labels, word_vertices, self.scale, self.length)
         img = np.array(img)
         img = np.stack((img,) * 3, axis=2)  # RGB
