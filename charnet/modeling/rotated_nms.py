@@ -55,9 +55,8 @@ def nms(boxes, overlapThresh, neighbourThresh=0.5, minScore=0, num_neig=0):
     return pick, new_boxes
 
 
-def nms_with_char_cls(boxes, char_scores, overlapThresh, neighbourThresh=0.5, minScore=0, num_neig=0):
+def nms_with_char_cls(boxes,  overlapThresh, neighbourThresh=0.5, minScore=0, num_neig=0):
     new_boxes = np.zeros_like(boxes)
-    new_char_scores = np.zeros_like(char_scores)
     pick = []
     suppressed = [False for _ in range(boxes.shape[0])]
     areas = [Polygon([(b[0], b[1]), (b[2], b[3]), (b[4], b[5]), (b[6], b[7])]).area
@@ -94,12 +93,11 @@ def nms_with_char_cls(boxes, char_scores, overlapThresh, neighbourThresh=0.5, mi
                 temp_scores = (boxes[neighbours, 8] - minScore).reshape((-1, 1))
                 new_boxes[i, :8] = (boxes[neighbours, :8] * temp_scores).sum(axis=0) / temp_scores.sum()
                 new_boxes[i, 8] = boxes[i, 8]
-                new_char_scores[i, :] = (char_scores[neighbours, :] * temp_scores).sum(axis=0) / temp_scores.sum()
             else:
                 for ni in neighbours:
                     suppressed[ni] = False
                 pick.pop()
-    return pick, new_boxes, new_char_scores
+    return pick, new_boxes
 
 
 def softnms(boxes, box_scores, char_scores=None, overlapThresh=0.3,

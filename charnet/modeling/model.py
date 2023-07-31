@@ -36,7 +36,7 @@ def to_numpy_or_none(*tensors):
         if t is None:
             results.append(None)
         else:
-            results.append(t.cpu().numpy())
+            results.append(t.cpu().detach().numpy())
     return results
 
 
@@ -144,6 +144,8 @@ class CharNet(nn.Module):
 
         self.loss = CombinedLoss()
 
+        self.return_bbs = False
+
     # def forward(self, im, im_scale_w, im_scale_h, original_im_w, original_im_h):
     def forward(self, im: torch.Tensor):
         im = torch.stack([self.transform(oneimg).cuda() for oneimg in im])
@@ -156,10 +158,28 @@ class CharNet(nn.Module):
         pred_word_fg = F.softmax(pred_word_fg, dim=1)
         pred_char_fg = F.softmax(pred_char_fg, dim=1)
 
-        pred_word_tblro = torch.cat((pred_word_tblr, pred_word_orient), 1)
-        pred_char_tblro = torch.cat((pred_char_tblr, pred_char_orient), 1)
+        if not self.return_bbs:
+            pred_word_tblro = torch.cat((pred_word_tblr, pred_word_orient), 1)
+            pred_char_tblro = torch.cat((pred_char_tblr, pred_char_orient), 1)
 
-        return pred_word_fg, pred_word_tblro, pred_char_fg, pred_char_tblro
+            return pred_word_fg, pred_word_tblro, pred_char_fg, pred_char_tblro
+
+        pred_word_fg, pred_word_tblr, \
+            pred_word_orient, pred_char_fg, \
+            pred_char_tblr, pred_char_orient = to_numpy_or_none(
+            pred_word_fg, pred_word_tblr,
+            pred_word_orient, pred_char_fg,
+            pred_char_tblr, pred_char_orient
+        )
+
+        char_bboxes, word_instances = self.post_processing(
+            pred_word_fg[0, 1], pred_word_tblr[0],
+            pred_word_orient[0, 0], pred_char_fg[0, 1],
+            pred_char_tblr[0],
+            1, 1, 512, 512
+        )
+
+        return char_bboxes, word_instances
 
     def build_transform(self):
         to_rgb_transform = T.Lambda(lambda x: x[[2, 1, 0]])

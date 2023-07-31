@@ -67,7 +67,7 @@ class OrientedTextPostProcessing(nn.Module):
     def forward(
             self, pred_word_fg, pred_word_tblr,
             pred_word_orient, pred_char_fg,
-            pred_char_tblr, pred_char_cls,
+            pred_char_tblr,
             im_scale_w, im_scale_h,
             original_im_w, original_im_h
     ):
@@ -75,18 +75,17 @@ class OrientedTextPostProcessing(nn.Module):
             pred_word_fg, pred_word_tblr, pred_word_orient,
             im_scale_w, im_scale_h, original_im_w, original_im_h
         )
-        char_bboxes, char_scores = self.parse_char(
-            pred_word_fg, pred_char_fg, pred_char_tblr, pred_char_cls,
+        char_bboxes = self.parse_char(
+            pred_word_fg, pred_char_fg, pred_char_tblr,
             im_scale_w, im_scale_h, original_im_w, original_im_h
         )
-        word_instances = self.parse_words(
-            ss_word_bboxes, char_bboxes,
-            char_scores, self.char_dict
-        )
+        # word_instances = self.parse_words(
+        #     ss_word_bboxes, char_bboxes, self.char_dict
+        # )
+        #
+        # word_instances = self.filter_word_instances(word_instances, self.lexicon)
 
-        word_instances = self.filter_word_instances(word_instances, self.lexicon)
-
-        return char_bboxes, char_scores, word_instances
+        return char_bboxes, ss_word_bboxes
 
     def parse_word_bboxes(
             self, pred_word_fg, pred_word_tblr,
@@ -116,7 +115,7 @@ class OrientedTextPostProcessing(nn.Module):
 
     def parse_char(
             self, pred_word_fg, pred_char_fg,
-            pred_char_tblr, pred_char_cls,
+            pred_char_tblr,
             scale_w, scale_h, W, H
     ):
         char_stride = self.char_stride
@@ -131,7 +130,6 @@ class OrientedTextPostProcessing(nn.Module):
                 word_fg_mask & (pred_char_fg > self.char_min_score))
 
         oriented_char_bboxes = np.zeros((char_keep_rows.shape[0], 9), dtype=np.float32)
-        char_scores = np.zeros((char_keep_rows.shape[0], self.num_char_class), dtype=np.float32)
         for idx in range(oriented_char_bboxes.shape[0]):
             y, x = char_keep_rows[idx], char_keep_cols[idx]
             t, b, l, r = pred_char_tblr[:, y, x]
@@ -143,16 +141,14 @@ class OrientedTextPostProcessing(nn.Module):
                 o, scale_w * char_stride * x, scale_h * char_stride * y)
             oriented_char_bboxes[idx, :8] = np.array(four_points, dtype=np.float32).flat
             oriented_char_bboxes[idx, 8] = score
-            char_scores[idx, :] = pred_char_cls[:, y, x]
-        keep, oriented_char_bboxes, char_scores = nms_with_char_cls(
-            oriented_char_bboxes, char_scores, self.char_nms_iou_thresh, num_neig=1
+        keep, oriented_char_bboxes = nms_with_char_cls(
+            oriented_char_bboxes,  self.char_nms_iou_thresh, num_neig=1
         )
         oriented_char_bboxes = oriented_char_bboxes[keep]
         oriented_char_bboxes[:, :8] = oriented_char_bboxes[:, :8].round()
         oriented_char_bboxes[:, 0:8:2] = np.maximum(0, np.minimum(W-1, oriented_char_bboxes[:, 0:8:2]))
         oriented_char_bboxes[:, 1:8:2] = np.maximum(0, np.minimum(H-1, oriented_char_bboxes[:, 1:8:2]))
-        char_scores = char_scores[keep]
-        return oriented_char_bboxes, char_scores
+        return oriented_char_bboxes
 
     def filter_word_instances(self, word_instances, lexicon):
         def match_lexicon(text, lexicon):
@@ -215,7 +211,7 @@ class OrientedTextPostProcessing(nn.Module):
             word_ins.word_bbox[:8] = word_bbox[:8]
         return word_instances
 
-    def parse_words(self, word_bboxes, char_bboxes, char_scores, char_dict):
+    def parse_words(self, word_bboxes, char_bboxes, char_dict):
         def match(word_bbox, word_poly, char_bbox, char_poly):
             word_xs = word_bbox[0:8:2]
             word_ys = word_bbox[1:8:2]
@@ -270,15 +266,8 @@ class OrientedTextPostProcessing(nn.Module):
         for idx in range(num_word):
             char_indices = word_chars[idx]
             if len(char_indices) > 0:
-                text, text_score, tmp_char_scores = recog(
-                    word_bboxes[idx],
-                    char_bboxes[char_indices],
-                    char_scores[char_indices]
-                )
                 word_instances.append(WordInstance(
                     word_bboxes[idx],
                     word_bbox_scores[idx],
-                    text, text_score,
-                    tmp_char_scores
                 ))
         return word_instances
