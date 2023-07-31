@@ -6,8 +6,14 @@ import torch.nn.functional as F
 class CombinedLoss(nn.Module):
     def __init__(self):
         super(CombinedLoss, self).__init__()
+        self.calc_np = False
 
     def calc_loss(self, pred_fg, pred_tblro, true_fg, true_tblro):
+        if self.calc_np:
+            # numpy error Ausgaben
+            np_true_fg = true_fg.cpu().detach().numpy()
+            np_pred_fg = pred_fg.cpu().detach().numpy()
+
         # FG LOSS: DICE + BCE
         smooth = 1
         pred_fg = torch.reshape(pred_fg[:, 1], (-1,))
@@ -23,7 +29,7 @@ class CombinedLoss(nn.Module):
         # dt_pred, db_pred, dl_pred, dr_pred = torch.split(pred_tblro, 1, 1)
         area_gt = (dt_gt + db_gt) * (dr_gt + dl_gt)
         area_pred = (dt_pred + db_pred) * (dr_pred + dl_pred)
-        w_union = torch.min(dr_gt, dr_pred) + torch.min(dl_gt, dr_pred)
+        w_union = torch.min(dr_gt, dr_pred) + torch.min(dl_gt, dl_pred)
         h_union = torch.min(dt_gt, dt_pred) + torch.min(db_gt, db_pred)
         area_intersect = w_union * h_union
         area_union = area_gt + area_pred - area_intersect
@@ -32,7 +38,39 @@ class CombinedLoss(nn.Module):
         tblro_loss = aabb_loss + 10 * theta_loss  # in [0,infinity) plus whatever theta_loss can give
         # tblro_loss = aabb_loss  # in [0,infinity)
 
-        return fg_loss + torch.mean(tblro_loss)  # in [0,infinity)
+        tblro_mask = true_fg > 0.9
+        tblro_mask = tblro_mask.reshape(tblro_loss.shape)
+
+        tblro_loss_masked = tblro_loss[tblro_mask]
+
+        tblro_loss_mean = torch.mean(tblro_loss[tblro_mask]) if len(tblro_loss_masked) > 0 else 0
+
+        if self.calc_np:
+            # numpy error Ausgaben
+            inv_mask = true_fg <= 0.9
+            inv_mask = inv_mask.reshape(tblro_loss.shape)
+            np_dt_gt, np_db_gt, np_dl_gt, np_dr_gt, np_theta_gt = \
+                dt_gt.masked_fill(inv_mask, 0).cpu().detach().numpy(), \
+                db_gt.masked_fill(inv_mask, 0).cpu().detach().numpy(), \
+                dl_gt.masked_fill(inv_mask, 0).cpu().detach().numpy(), \
+                dr_gt.masked_fill(inv_mask, 0).cpu().detach().numpy(), \
+                theta_gt.masked_fill(inv_mask, 0).cpu().detach().numpy()
+            np_dt_pred, np_db_pred, np_dl_pred, np_dr_pred, np_theta_pred = \
+                dt_pred.masked_fill(inv_mask, 0).cpu().detach().numpy(), \
+                db_pred.masked_fill(inv_mask, 0).cpu().detach().numpy(), \
+                dl_pred.masked_fill(inv_mask, 0).cpu().detach().numpy(), \
+                dr_pred.masked_fill(inv_mask, 0).cpu().detach().numpy(), \
+                theta_pred.masked_fill(inv_mask, 0).cpu().detach().numpy()
+            np_area_gt, np_area_pred = area_gt.cpu().detach().numpy(), area_pred.cpu().detach().numpy()
+            np_w_union, np_h_union = w_union.cpu().detach().numpy(), h_union.cpu().detach().numpy()
+            np_area_intersect, np_area_union = area_intersect.cpu().detach().numpy(), area_union.cpu().detach().numpy()
+            np_aabb_loss = aabb_loss.cpu().detach().numpy()
+            np_theta_loss = theta_loss.cpu().detach().numpy()
+            np_tblro_loss = tblro_loss.cpu().detach().numpy()
+            np_tblro_loss_masked = tblro_loss.masked_fill(inv_mask, 0).cpu().detach().numpy()
+
+
+        return fg_loss + tblro_loss_mean  # in [0,infinity)
 
     def forward(self, pred_word_fg, pred_word_tblro, pred_char_fg, pred_char_tblro,
                 true_word_fg, true_word_tblro, true_char_fg, true_char_tblro):
