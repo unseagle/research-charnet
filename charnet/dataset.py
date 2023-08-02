@@ -468,7 +468,7 @@ class CustomDataset(data.Dataset):
         transform = transforms.Compose([  # transforms.ColorJitter(0.5, 0.5, 0.5, 0.25),
             transforms.Normalize(mean=0.5, std=0.5)])
 
-        if img.height != 512:
+        if img.height != self.length:
             print(f"Wrong dimensions, img.height={img.height}, img.width={img.width}")
             print(img_path)
         true_word_fg, true_word_tblro, true_char_fg, true_char_tblro, true_char_cls = get_score_geo(img, vertices, labels, word_vertices, self.scale, self.length)

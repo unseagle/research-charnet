@@ -112,7 +112,7 @@ class CharRecognizer(nn.Module):
 
 
 class CharNet(nn.Module):
-    def __init__(self, backbone=hourglass88()):
+    def __init__(self, backbone=hourglass88(), img_size=256):
         super(CharNet, self).__init__()
         self.backbone = backbone
         decoder_channels = 256
@@ -145,6 +145,7 @@ class CharNet(nn.Module):
         self.loss = CombinedLoss()
 
         self.return_bbs = False
+        self.img_size = img_size
 
     # def forward(self, im, im_scale_w, im_scale_h, original_im_w, original_im_h):
     def forward(self, im: torch.Tensor):
@@ -176,7 +177,7 @@ class CharNet(nn.Module):
             pred_word_fg[0, 1], pred_word_tblr[0],
             pred_word_orient[0, 0], pred_char_fg[0, 1],
             pred_char_tblr[0],
-            1, 1, 512, 512
+            1, 1, self.img_size, self.img_size
         )
 
         return char_bboxes, word_instances
