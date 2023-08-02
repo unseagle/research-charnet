@@ -2,7 +2,6 @@ import os
 
 from charnet.modeling.model import CharNet
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from charnet.dataset import CustomDataset
@@ -10,46 +9,36 @@ from charnet.config import cfg
 from tqdm import tqdm
 from datetime import datetime
 
-# batch_size = 64
-batch_size = 5
-learning_rate = 0.001
-num_epochs = 3
+import config
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 cfg.merge_from_file("configs/myconfig.yaml")
 cfg.freeze()
 print(cfg)
 
-model = CharNet()
+model = CharNet(img_size=config.img_size)
 # this is how I can load the default weights to train from
-model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
+# model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
 
 model.to(device)
 
-# loss
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
 
-# data
-def calculate_loss(outputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-    loss = model.loss(*outputs, *targets)
-    return loss
-
-
-# train_dataset = CustomDataset()
 all_files = os.listdir("example_samples/images")
 num = len(all_files)
-train_num = int(float(num) * 0.75)
+train_num = int(float(num) * config.training_part)
 test_num = num - train_num
 train_files, test_files = random_split(all_files, [train_num, test_num])
-train_dataset = CustomDataset(train_files, "example_samples/images", "example_samples/labels")
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_dataset = CustomDataset(test_files, "example_samples/images", "example_samples/labels")
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+train_dataset = CustomDataset(train_files, "example_samples/images", "example_samples/labels", length=config.img_size)
+train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=False)
+test_dataset = CustomDataset(test_files, "example_samples/images", "example_samples/labels", length=config.img_size)
+test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
-for epoch in range(num_epochs):
+for epoch in range(config.num_epochs):
     model.train()
+    model.backbone.requires_grad_(False)  # Freeze backbone weights
     for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
         optimizer.zero_grad()
 
@@ -57,8 +46,7 @@ for epoch in range(num_epochs):
         data = data.to(device)
         target = [t.to(device) for t in target]
         outputs = model(data)
-        print([o.shape for o in outputs], ", ", [t.shape for t in target])
-        loss = calculate_loss(outputs, target)
+        loss = model.loss(*outputs, *target)
 
         # Rückwärtsdurchlauf und Optimierung
         loss.backward()
@@ -66,8 +54,8 @@ for epoch in range(num_epochs):
 
     # Ausgabe von Trainingsfortschritt
     # if (batch_idx + 1) % 100 == 0:
-    # print(
-    #     f'Training - Epoch [{epoch + 1}/{num_epochs}], Batch [{batch_idx + 1}/{len(train_loader)}], Training-Loss: {loss.item():.4f}')
+    print(
+        f'Training - Epoch [{epoch + 1}/{config.num_epochs}], Batch [{batch_idx + 1}/{len(train_loader)}], Training-Loss: {loss.item():.4f}')
 
     # Validierung nach jeder Epoche
     model.eval()  # Setze das Modell in den Evaluationsmodus
@@ -80,7 +68,7 @@ for epoch in range(num_epochs):
             targets = [t.to(device) for t in targets]
             # Vorwärtsdurchlauf
             outputs = model(data)
-            loss = calculate_loss(outputs, targets)
+            loss = model.loss(*outputs, *targets)
             test_loss += loss.item()
 
             # Genauigkeit berechnen
@@ -92,7 +80,7 @@ for epoch in range(num_epochs):
     # accuracy = correct / total
 
     # print(f'Validation - Epoch [{epoch + 1}/{num_epochs}], Test-Loss: {test_loss:.4f}, Accuracy: {100 * accuracy:.2f}%')
-    print(f'Validation - Epoch [{epoch + 1}/{num_epochs}], Test-Loss: {test_loss:.4f}')
+    print(f'Validation - Epoch [{epoch + 1}/{config.num_epochs}], Test-Loss: {test_loss:.4f}')
 
 print("Training abgeschlossen!")
 
