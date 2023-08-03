@@ -27,18 +27,21 @@ model = CharNet()
 model.to("cuda")
 
 # decide what weights to load
-weights = "myweights/07-28_19-43.pth"
+# weights = "weights/icdar2015_hourglass88.pth"
+weights = "myweights/07-31_21-37.pth"
 
 model.load_state_dict(torch.load(weights), strict=False)
 model.eval()
 model.return_bbs = True
 
-files = [f"example_samples/images/{f}" for f in os.listdir("example_samples/images")]
+dir = "example_samples//images/"
+files = [f"{dir}{f}" for f in os.listdir(dir)]
 
 for path in files:
     print(f"Reading file {path}")
     img = get_img(path)
     char_bbs, word_bbs = model(img)
+    char_bbs, word_bbs = char_bbs[0], word_bbs[0]
     print(f"char bbs: {char_bbs}")
     print(f"word bbs: {word_bbs}")
     for word_bb in word_bbs:

@@ -1,5 +1,8 @@
 import os
 
+import torchvision.utils
+
+import util
 from charnet.modeling.model import CharNet
 import torch
 import torch.optim as optim
@@ -8,6 +11,7 @@ from charnet.dataset import CustomDataset
 from charnet.config import cfg
 from tqdm import tqdm
 from datetime import datetime
+import cv2 as cv
 
 import config
 
@@ -19,7 +23,7 @@ print(cfg)
 
 model = CharNet(img_size=config.img_size)
 # this is how I can load the default weights to train from
-# model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
+model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
 
 model.to(device)
 
@@ -36,7 +40,7 @@ train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=F
 test_dataset = CustomDataset(test_files, "example_samples/images", "example_samples/labels", length=config.img_size)
 test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
-for epoch in range(config.num_epochs):
+for epoch_idx, epoch in enumerate(range(config.num_epochs)):
     model.train()
     model.backbone.requires_grad_(False)  # Freeze backbone weights
     for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
@@ -76,11 +80,22 @@ for epoch in range(config.num_epochs):
             # total += targets.size(0)
             # correct += (predicted == targets).sum().item()
 
+            if config.print_batch_after_epoch and batch_idx == 0:
+                model.return_bbs = True
+                char_bbs, word_bbs = model(data[0:config.print_batch_num])
+                model.return_bbs = False
+                imgs = data[0:config.print_batch_num]
+                result_imgs = util.draw_bbs(imgs, word_bbs, char_bbs)
+                for idx, img in enumerate(result_imgs):
+                    # torchvision.utils.save_image(img, config.print_batch_folder + f"epoch_{epoch_idx}_img_{idx}.png")
+                    cv.imwrite(config.print_batch_folder + f"epoch_{epoch_idx}_img_{idx}.png", img)
+
     test_loss /= len(test_loader)
     # accuracy = correct / total
 
     # print(f'Validation - Epoch [{epoch + 1}/{num_epochs}], Test-Loss: {test_loss:.4f}, Accuracy: {100 * accuracy:.2f}%')
     print(f'Validation - Epoch [{epoch + 1}/{config.num_epochs}], Test-Loss: {test_loss:.4f}')
+
 
 print("Training abgeschlossen!")
 
