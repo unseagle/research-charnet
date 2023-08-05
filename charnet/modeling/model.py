@@ -139,8 +139,6 @@ class CharNet(nn.Module):
 
         self.transform = self.build_transform()
 
-        self.loss = CombinedLoss()
-
         self.return_bbs = False
         self.img_size = img_size
 

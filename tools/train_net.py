@@ -3,6 +3,7 @@ import os
 import torchvision.utils
 
 import util
+from charnet.loss import CombinedLoss
 from charnet.modeling.model import CharNet
 import torch
 import torch.optim as optim
@@ -23,7 +24,7 @@ print(cfg)
 
 model = CharNet(img_size=config.img_size)
 # this is how I can load the default weights to train from
-model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
+# model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
 
 model.to(device)
 
@@ -40,6 +41,24 @@ train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=F
 test_dataset = CustomDataset(test_files, "example_samples/images", "example_samples/labels", length=config.img_size)
 test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
+loss_fn = CombinedLoss(
+    word_char=0.5,
+    fg_tblro=0.9,
+    aabb_theta=0.5,
+    bce_dice=0.9
+)
+
+if config.print_batch_after_epoch:
+    for _, (data, _2) in enumerate(test_loader):
+        model.return_bbs = True
+        char_bbs, word_bbs = model(data[0:config.print_batch_num])
+        model.return_bbs = False
+        imgs = data[0:config.print_batch_num]
+        result_imgs = util.draw_bbs(imgs, word_bbs, char_bbs)
+        for idx, img in enumerate(result_imgs):
+            cv.imwrite(config.print_batch_folder + f"before_img_{idx}.png", img)
+        break
+
 for epoch_idx, epoch in enumerate(range(config.num_epochs)):
     model.train()
     model.backbone.requires_grad_(False)  # Freeze backbone weights
@@ -50,7 +69,7 @@ for epoch_idx, epoch in enumerate(range(config.num_epochs)):
         data = data.to(device)
         target = [t.to(device) for t in target]
         outputs = model(data)
-        loss = model.loss(*outputs, *target)
+        loss = loss_fn(*outputs, *target)
 
         # Rückwärtsdurchlauf und Optimierung
         loss.backward()
@@ -72,7 +91,7 @@ for epoch_idx, epoch in enumerate(range(config.num_epochs)):
             targets = [t.to(device) for t in targets]
             # Vorwärtsdurchlauf
             outputs = model(data)
-            loss = model.loss(*outputs, *targets)
+            loss = loss_fn(*outputs, *targets)
             test_loss += loss.item()
 
             # Genauigkeit berechnen

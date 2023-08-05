@@ -18,3 +18,6 @@ def draw_bbs(imgs, word_bbs, char_bbs):
                              (0., 255, 0.), 1)
         result_imgs.append(img)
     return result_imgs
+
+def weighted_sum(a, b, weight_a):
+    return weight_a * a + (1 - weight_a) * b
