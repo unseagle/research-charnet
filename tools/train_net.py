@@ -10,7 +10,6 @@ from torch.utils.data import DataLoader, random_split
 from charnet.dataset import CustomDataset
 from charnet.config import cfg
 from tqdm import tqdm
-from datetime import datetime
 import cv2 as cv
 import optuna
 
@@ -120,8 +119,7 @@ def objective(trial):
 
     # save progress
     if config.save_weights:
-        timestr = datetime.now().strftime("%m-%d_%H-%M")
-        torch.save(model.state_dict(), f"myweights/{timestr}.pth")
+        util.save_weights(model, optimizer, epoch_idx)
 
     # return mean(optuna_losses)
 

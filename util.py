@@ -2,7 +2,10 @@ import math
 
 import cv2 as cv
 import numpy as np
+import torch
+
 import config
+from datetime import datetime
 
 
 def draw_bbs(imgs, bbs, is_normalized=False):
@@ -25,6 +28,27 @@ def transpose_for_cv(imgs):
 
 def weighted_sum(a, b, weight_a):
     return weight_a * a + (1 - weight_a) * b
+
+
+def get_branch_list():
+    return [
+        config.ACTIVATE_CHAR_FG_BCE or config.ACTIVATE_WORD_FG_DICE,
+        config.ACTIVATE_WORD_TBLR, config.ACTIVATE_WORD_ORIENT,
+        config.ACTIVATE_CHAR_FG_BCE or config.ACTIVATE_CHAR_FG_DICE,
+        config.ACTIVATE_CHAR_TBLR, config.ACTIVATE_CHAR_ORIENT
+    ]
+
+
+def save_weights(model, optimizer, epoch):
+    timestr = datetime.now().strftime("%m-%d_%H-%M")
+    branches = "".join(map(str, list(map(lambda x: 1 if x else 0, get_branch_list()))))
+    state = {
+        'epoch': epoch,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'branches': branches
+    }
+    torch.save(state, f"{config.weights_folder}{timestr}_branches_{branches}.pth")
 
 
 # visualizations

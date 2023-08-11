@@ -1,10 +1,11 @@
 # training
 batch_size = 32
 learning_rate = 0.0005
-num_epochs = 20
+num_epochs = 1
 training_part = 0.75  # part of the images that will be used for training rather than testing
+weights_folder = "weights/"
 
-save_weights = False
+save_weights = True
 
 # interim results
 print_batch_after_epoch = True
