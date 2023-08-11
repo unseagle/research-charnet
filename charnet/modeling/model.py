@@ -140,6 +140,7 @@ class CharNet(nn.Module):
         self.transform = self.build_transform()
 
         self.return_bbs = False
+        self.return_all = False
         self.img_size = img_size
 
     # def forward(self, im, im_scale_w, im_scale_h, original_im_w, original_im_h):
@@ -154,15 +155,15 @@ class CharNet(nn.Module):
         pred_word_fg = F.softmax(pred_word_fg, dim=1)
         pred_char_fg = F.softmax(pred_char_fg, dim=1)
 
-        if not self.return_bbs:
+        if not self.return_all and not self.return_bbs:
             pred_word_tblro = torch.cat((pred_word_tblr, pred_word_orient), 1)
             pred_char_tblro = torch.cat((pred_char_tblr, pred_char_orient), 1)
 
             return pred_word_fg, pred_word_tblro, pred_char_fg, pred_char_tblro
 
-        pred_word_fg, pred_word_tblr, \
-            pred_word_orient, pred_char_fg, \
-            pred_char_tblr, pred_char_orient = to_numpy_or_none(
+        pred_word_fg_np, pred_word_tblr_np, \
+            pred_word_orient_np, pred_char_fg_np, \
+            pred_char_tblr_np, pred_char_orient_np = to_numpy_or_none(
             pred_word_fg, pred_word_tblr,
             pred_word_orient, pred_char_fg,
             pred_char_tblr, pred_char_orient
@@ -177,15 +178,19 @@ class CharNet(nn.Module):
 
         char_bboxes = []
         word_bboxes = []
-        for i in range(len(pred_word_fg)):
+        for i in range(len(pred_word_fg_np)):
             char_bbox, word_instance = self.post_processing(
-                pred_word_fg[i, 1], pred_word_tblr[i],
-                pred_word_orient[i, 0], pred_char_fg[i, 1],
-                pred_char_tblr[i], 1, 1, self.img_size, self.img_size
+                pred_word_fg_np[i, 1], pred_word_tblr_np[i],
+                pred_word_orient_np[i, 0], pred_char_fg_np[i, 1],
+                pred_char_tblr_np[i], 1, 1, self.img_size, self.img_size
             )
             char_bboxes.append(char_bbox)
             word_bboxes.append(word_instance)
 
+        if self.return_all:
+            pred_word_tblro = torch.cat((pred_word_tblr, pred_word_orient), 1)
+            pred_char_tblro = torch.cat((pred_char_tblr, pred_char_orient), 1)
+            return char_bboxes, word_bboxes, pred_word_fg, pred_word_tblro, pred_char_fg, pred_char_tblro
         return char_bboxes, word_bboxes
 
     def build_transform(self):

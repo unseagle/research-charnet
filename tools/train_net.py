@@ -32,7 +32,8 @@ def objective(trial):
 
     model.to(device)
 
-    lr = trial.suggest_float("lr", 0.0004, 0.0006)
+    # lr = trial.suggest_float("lr", 0.0004, 0.0006)
+    lr = 0.0005
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
 
@@ -47,27 +48,19 @@ def objective(trial):
     test_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
     loss_fn = CombinedLoss(
-        # word_char=0.5,
-        # fg_tblro=0.9,
-        # aabb_theta=0.5,
-        # bce_dice=0.9
-        word_char=trial.suggest_float("word_char", 0.45, 0.55),
-        fg_tblro=trial.suggest_float("fg_tblro", 0.35, 0.52),
-        aabb_theta=trial.suggest_float("aabb_theta", 0.25, 0.42),
-        bce_dice=trial.suggest_float("bce_dice", 0.85, 0.96)
+        word_char=0.5,
+        fg_tblro=0.5,
+        aabb_theta=0.5,
+        bce_dice=0.5
+        # word_char=trial.suggest_float("word_char", 0.45, 0.55),
+        # fg_tblro=trial.suggest_float("fg_tblro", 0.35, 0.52),
+        # aabb_theta=trial.suggest_float("aabb_theta", 0.25, 0.42),
+        # bce_dice=trial.suggest_float("bce_dice", 0.85, 0.96)
     )
     optuna_loss_fn = OptunaLoss()
 
     if config.print_batch_after_epoch:
-        for _, (data, _2) in enumerate(test_loader):
-            model.return_bbs = True
-            char_bbs, word_bbs = model(data[0:config.print_batch_num])
-            model.return_bbs = False
-            imgs = data[0:config.print_batch_num]
-            result_imgs = util.draw_bbs(imgs, word_bbs, char_bbs)
-            for idx, img in enumerate(result_imgs):
-                cv.imwrite(config.print_batch_folder + f"before_img_{idx}.png", img)
-            break
+        util.visualize_batch(model, test_loader, "before", print_unchanged=True)
 
     optuna_losses = []
     for epoch_idx, epoch in enumerate(range(config.num_epochs)):
@@ -81,7 +74,7 @@ def objective(trial):
             target = [t.to(device) for t in target]
             outputs = model(data)
             loss = loss_fn(*outputs, *target)
-            print(f"Current optuna loss: {optuna_loss_fn(outputs[2], target[2])}")
+            # print(f"Current optuna loss: {optuna_loss_fn(outputs[2], target[2])}")
 
             # Rückwärtsdurchlauf und Optimierung
             loss.backward()
@@ -104,8 +97,8 @@ def objective(trial):
                 # Vorwärtsdurchlauf
                 outputs = model(data)
                 loss = loss_fn(*outputs, *targets)
-                if epoch_idx == config.num_epochs - 1:
-                    optuna_losses.append(optuna_loss_fn(outputs[2], targets[2]))
+                # if epoch_idx == config.num_epochs - 1:
+                #     optuna_losses.append(optuna_loss_fn(outputs[2], targets[2]))
                 test_loss += loss.item()
 
                 # Genauigkeit berechnen
@@ -114,14 +107,7 @@ def objective(trial):
                 # correct += (predicted == targets).sum().item()
 
                 if config.print_batch_after_epoch and batch_idx == 0:
-                    model.return_bbs = True
-                    char_bbs, word_bbs = model(data[0:config.print_batch_num])
-                    model.return_bbs = False
-                    imgs = data[0:config.print_batch_num]
-                    result_imgs = util.draw_bbs(imgs, word_bbs, char_bbs)
-                    for idx, img in enumerate(result_imgs):
-                        # torchvision.utils.save_image(img, config.print_batch_folder + f"epoch_{epoch_idx}_img_{idx}.png")
-                        cv.imwrite(config.print_batch_folder + f"epoch_{epoch_idx}_img_{idx}.png", img)
+                    util.visualize_batch(model, test_loader, f"epoch_{epoch_idx}")
 
         test_loss /= len(test_loader)
         # accuracy = correct / total
@@ -137,14 +123,16 @@ def objective(trial):
         timestr = datetime.now().strftime("%m-%d_%H-%M")
         torch.save(model.state_dict(), f"myweights/{timestr}.pth")
 
-    return mean(optuna_losses)
+    # return mean(optuna_losses)
 
 
 if __name__ == "__main__":
-    n_trials = 30
-    study = optuna.create_study()
-    study.optimize(objective, n_trials=n_trials)
-    print(f"Best value: {study.best_value} (params: {study.best_params})\n")
+    objective(None)
+    # n_trials = 30
+    # study = optuna.create_study()
+    # study.optimize(objective, n_trials=n_trials)
+    # print(f"Best value: {study.best_value} (params: {study.best_params})\n")
+
     # Currently best (value of 0.95218):
     # lr = 0.0005934
     # word_char = 0.51635
