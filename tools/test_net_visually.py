@@ -27,14 +27,19 @@ model = CharNet()
 model.to("cuda")
 
 # decide what weights to load
-# weights = "weights/icdar2015_hourglass88.pth"
-weights = "myweights/07-31_21-37.pth"
+weights = "weights/icdar2015_hourglass88.pth"
+# weights = "myweights/07-31_21-37.pth"
 
-model.load_state_dict(torch.load(weights), strict=False)
+# model.load_state_dict(torch.load(weights), strict=False)
+model.backbone.load_state_dict(torch.load(weights), strict=False)
+model.word_detector.load_state_dict(torch.load("weights/08-14_10-01_branches_100000.pth"), strict=False)
+model.word_detector.word_regression_feat.load_state_dict(torch.load("weights/08-14_11-34_branches_010000.pth"), strict=False)
+model.word_detector.word_tblr_pred.load_state_dict(torch.load("weights/08-14_11-34_branches_010000.pth"), strict=False)
+model.word_detector.orient_pred.load_state_dict(torch.load("weights/08-14_12-43_branches_001000.pth"), strict=False)
 model.eval()
 model.return_bbs = True
 
-dir = "example_samples//images/"
+dir = "example_samples/images/"
 files = [f"{dir}{f}" for f in os.listdir(dir)]
 
 for path in files:

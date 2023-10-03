@@ -25,16 +25,19 @@ def objective(trial):
     # print(cfg)
 
     model = CharNet(img_size=config.img_size)
+
+
     # this is how I can load the default weights to train from
-    # model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
-    model.backbone.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
+    if config.use_pretrained_weights:
+        model.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
+    elif config.use_pretrained_backbone:
+        model.backbone.load_state_dict(torch.load(cfg.WEIGHT), strict=False)
 
     model.to(device)
 
     # lr = trial.suggest_float("lr", 0.0004, 0.0006)
     lr = 0.0005
     optimizer = optim.Adam(model.parameters(), lr=lr)
-
 
     all_files = os.listdir("example_samples/images")
     num = len(all_files)
@@ -48,9 +51,9 @@ def objective(trial):
 
     loss_fn = CombinedLoss(
         word_char=0.5,
-        fg_tblro=0.5,
-        aabb_theta=0.5,
-        bce_dice=0.5
+        fg_tblro=0.45,
+        aabb_theta=0.4,
+        bce_dice=0.9
         # word_char=trial.suggest_float("word_char", 0.45, 0.55),
         # fg_tblro=trial.suggest_float("fg_tblro", 0.35, 0.52),
         # aabb_theta=trial.suggest_float("aabb_theta", 0.25, 0.42),

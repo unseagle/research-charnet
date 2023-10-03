@@ -137,6 +137,23 @@ def find_min_rect_angle(vertices):
     Output:
         the best angle <radian measure>
     '''
+    # current_angle = math.atan((vertices[3] - vertices[1]) / (vertices[2] - vertices[0] + 0.00001))
+    # if vertices[2] - vertices[0] < 0:
+    #     current_angle += math.pi  # * (-1 if current_angle > 0 else 1)
+    # if current_angle < 0:
+    #     current_angle += 2 * math.pi
+    #
+    # if math.pi / 4 >= current_angle:
+    #     return -1 * current_angle
+    # if current_angle > math.pi * 7 / 4:
+    #     return current_angle - 2 * math.pi
+    # elif math.pi * 3 / 4 >= current_angle > math.pi / 4:
+    #     return (math.pi / 2) - current_angle
+    # elif math.pi * 5 / 4 >= current_angle > math.pi * 3 / 4:
+    #     return math.pi - current_angle
+    # else:
+    #     return (math.pi * 3 / 2) - current_angle
+    #
     angle_interval = 1
     angle_list = list(range(-90, 90, angle_interval))
     area_list = []
