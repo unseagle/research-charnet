@@ -73,22 +73,27 @@ def visualize_batch(model, data_loader, prefix, print_unchanged=False):
         model.return_all = True
         char_bbs, word_bbs, word_fg, word_tblro, char_fg, char_tblro = model(data[0:config.print_batch_num])
         model.return_all = False
-        imgs = data[0:config.print_batch_num].cpu().detach().numpy() * 255.
+        imgs = data[0:config.print_batch_num].cpu().detach().numpy()
         imgs = transpose_for_cv(imgs)
+        imgs *= 255.
         if print_unchanged:
             visualize_img_batch(imgs, config.print_batch_folder + "0riginal_", is_normalized=True)
-        if w:
-            imgs = draw_bbs(imgs, word_bbs, is_normalized=True)
-        if c:
-            imgs = draw_bbs(imgs, char_bbs, is_normalized=True)
-        if w or c:
-            visualize_img_batch(imgs, name_prefix + "_0_bboxes", is_normalized=True)
+        # if w:
+        #     imgs = draw_bbs(imgs, word_bbs, is_normalized=True)
+        # if c:
+        #     imgs = draw_bbs(imgs, char_bbs, is_normalized=True)
+        # if w or c:
+        #     visualize_img_batch(imgs, name_prefix + "_0_bboxes", is_normalized=True)
         if not w:
             if w_fg:
-                visualize_img_batch(word_fg.cpu().detach().numpy()[:, 1], name_prefix + "_word_fg", is_normalized=False)
+                masks = word_fg.cpu().detach().numpy()[:, 1]
+                masks = np.where(masks >= 0.7, 1, 0)
+                visualize_img_batch_contours(imgs, masks, name_prefix + "_word_fg", is_normalized=True)
         if not c:
             if c_fg:
-                visualize_img_batch(char_fg.cpu().detach().numpy()[:, 1], name_prefix + "_char_fg", is_normalized=False)
+                masks = char_fg.cpu().detach().numpy()[:, 1]
+                masks = np.where(masks >= 0.7, 1, 0)
+                visualize_img_batch_contours(imgs, masks, name_prefix + "_char_fg", is_normalized=True)
         if not w and w_tblr:
             # tblr_map = (targets[1].cpu().detach().numpy()[0:config.print_batch_num, 0:4])
             tblr_map = (word_tblro.cpu().detach().numpy()[:, 0:4])
@@ -138,6 +143,19 @@ def visualize_img_batch(img_batch, file, is_normalized=False):
     for idx, img in enumerate(img_batch):
         if not is_normalized:
             img = img * 255.0
+        cv.imwrite(file + f"_{idx}.png", img)
+
+
+def visualize_img_batch_contours(img_batch, mask_batch, file, is_normalized=False):
+    if not is_normalized:
+        mask_batch = mask_batch * 255.0
+    for idx, img in enumerate(img_batch):
+        if not is_normalized:
+            img = img * 255.0
+        current_mask = mask_batch[idx].astype(np.uint8)
+        current_mask = cv.resize(current_mask, dsize=(config.img_size, config.img_size))
+        contours, hierarchy = cv.findContours(current_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        img = cv.drawContours(img, contours, -1, (0, 255, 0), 1)
         cv.imwrite(file + f"_{idx}.png", img)
 
 
